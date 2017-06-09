@@ -2,26 +2,21 @@ package main;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 
-import javax.swing.AbstractButton;
 import javax.swing.Icon;
 import javax.swing.JButton;
 import javax.swing.SwingConstants;
-import javax.swing.plaf.metal.MetalButtonUI;
 
-class MyButton extends JButton implements ActionListener {
+class MqttButton extends JButton implements ActionListener {
 
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
 
-	private String title;				
+	private String title;
 	private String subTopic;
 	private String pubTopic;
 	private int qos = 0;
@@ -31,10 +26,11 @@ class MyButton extends JButton implements ActionListener {
 	private String msgOn;
 	private String msgOff;
 	private String name;
-	private MyButton thisButton;
-	private boolean buttonState = false; // false -off true -on
+	private MqttButton thisButton;
+	private boolean buttonState = true; // false -off true -on
+	private Client client;
 
-	public MyButton() {
+	public MqttButton() {
 		super();
 		this.addActionListener(this);
 		super.setPreferredSize(new Dimension(115, 125));
@@ -48,13 +44,11 @@ class MyButton extends JButton implements ActionListener {
 		thisButton.setVerticalTextPosition(SwingConstants.TOP);
 		thisButton.setVerticalAlignment(SwingConstants.TOP);
 
-		ModifButtonUI modButtonUI=new ModifButtonUI();
+		ModifButtonUI modButtonUI = new ModifButtonUI();
 		this.setUI(modButtonUI);
 		this.setForeground(Color.BLACK);
 
-		
 	}
-
 
 	public String getName() {
 		return name;
@@ -132,6 +126,15 @@ class MyButton extends JButton implements ActionListener {
 		this.msgOn = msgOn;
 	}
 
+	public void setClient(Client client) {
+		this.client=client;
+		
+		while(!client.isConnected()){
+			System.out.println("waiting");
+			client.subscribe(subTopic);
+		}
+	}
+
 	public String getMsgOff() {
 		return msgOff;
 	}
@@ -139,15 +142,33 @@ class MyButton extends JButton implements ActionListener {
 	public void setMsgOff(String msgOff) {
 		this.msgOff = msgOff;
 	}
-
+	
+	public void setStateOff(){
+		setIcon(iconOff);
+		buttonState=true;
+	}
+	
+	public void setStateOn(){
+		setIcon(iconOn);
+		buttonState=false;
+	}
+	
 	@Override
 	public void actionPerformed(ActionEvent e) {
+		try{
 		if (buttonState) {
 			setIcon(iconOn);
+			if(!(this.pubTopic.isEmpty()||this.msgOn.isEmpty()))
+				client.publicMsg(this.pubTopic, this.msgOn);
 			buttonState = !buttonState;
 		} else {
 			setIcon(iconOff);
+			if(!(this.pubTopic.isEmpty()||this.msgOn.isEmpty()))
+				client.publicMsg(this.pubTopic, this.msgOff);
 			buttonState = !buttonState;
+		}
+		}catch(Exception exc){
+			System.out.println("Error send");
 		}
 
 	}
@@ -156,11 +177,5 @@ class MyButton extends JButton implements ActionListener {
 		return "name:" + name + " pubTopic:" + pubTopic + " subTopic:" + subTopic + " qos:" + qos + " retailed:"
 				+ retailed + " msgOn:" + msgOn + " msgOff:" + msgOff + " title: " + title;
 	}
-
-
-
-
-
-
 
 }
